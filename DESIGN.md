@@ -17,8 +17,8 @@ maps 1:1 and that's fine; the goal is that the plugin feels native to Neovim.
 ## Confirmed environment facts (do not re-derive, just use)
 
 - Leader is `<leader>` (Space). Plugin's own prefix is `<leader>D` (config: `opts.prefix`,
-  default `"<leader>D"`). Verified collision-free against LazyVim defaults and Bruno's
-  own config. ONE caveat: `extras/lang/sql.lua` (not currently enabled) maps `<leader>D`
+  default `"<leader>D"`). Verified collision-free against LazyVim defaults and a real
+  user config. ONE caveat: `extras/lang/sql.lua` (not currently enabled) maps `<leader>D`
   to `DBUIToggle` — if that extra is ever enabled, the user changes `opts.prefix` to
   `<leader>M` (verified free everywhere). Don't hardcode the prefix anywhere except
   `config.lua`'s default.
@@ -36,11 +36,12 @@ maps 1:1 and that's fine; the goal is that the plugin feels native to Neovim.
 - Completion: **blink.cmp** custom source (not nvim-cmp).
 - Tests: **plenary.nvim** busted (`describe`/`it`), run via
   `nvim --headless --noplugin -u tests/minimal_init.lua -c "PlenaryBustedDirectory tests/ { minimal_init = 'tests/minimal_init.lua' }"`.
-  `tests/minimal_init.lua` MUST be a minimal 4-line rtp setup — NEVER point it at
-  Bruno's real `~/.config/nvim/init.lua`, that hangs for 120s+ per spec file (verified).
-- dbt-core 1.9.6 installed at `/opt/homebrew/var/pyenv/versions/3.9.10/bin/dbt`
-  (that pyenv version, not the pyenv-global 3.13.2 one). dbt-duckdb 1.9.6 also installed
-  there now.
+  `tests/minimal_init.lua` MUST be a minimal 4-line rtp setup — NEVER point it at a
+  real, full `~/.config/nvim/init.lua`; that hangs for 120s+ per spec file (verified
+  against a stock LazyVim config).
+- Dev environment used to build this: dbt-core 1.9.6 + dbt-duckdb 1.9.6 under a pyenv
+  Python 3.9.10 (any dbt-core 1.x + dbt-duckdb environment on `PATH` will do — this
+  exact version isn't a hard requirement, just what was verified).
 
 ## Test fixture (already built and verified working — do not re-run dbt setup)
 
@@ -49,9 +50,10 @@ maps 1:1 and that's fine; the goal is that the plugin feels native to Neovim.
   and will fail to parse — stay on `jaffle-shop-old`).
 - `tests/fixtures/jaffle-shop/profiles.yml` — a project-local profile (duckdb, target
   `dev`, profile name `default`) pointing at `tests/fixtures/jaffle-shop/jaffle_shop.duckdb`.
-  **This is intentionally separate from `~/.dbt/profiles.yml`**, which already has an
-  unrelated real `default` profile pointing at Monzo's BigQuery. Never touch
-  `~/.dbt/profiles.yml`. Always invoke dbt with `--profiles-dir tests/fixtures/jaffle-shop`
+  **This is intentionally separate from `~/.dbt/profiles.yml`**, which on a real dev
+  machine will likely already have an unrelated `default` profile pointing at a real
+  warehouse. Never touch `~/.dbt/profiles.yml`. Always invoke dbt with
+  `--profiles-dir tests/fixtures/jaffle-shop`
   (or rely on the plugin's own `profiles_dir` config resolving to the project dir when set).
 - `dbt deps && dbt seed --full-refresh --vars '{"load_source_data": true}' && dbt build && dbt docs generate`
   have already been run successfully against this fixture (52/52 pass) with
@@ -419,8 +421,8 @@ Source:get_completions(ctx, callback) -> cancel_fn
   -- return function() end as the cancel fn (no long-running lookup to cancel in v1).
 ```
 Register in the user's own LazyVim spec (document in README, this repo does NOT modify
-Bruno's `~/.config/nvim` — see keymaps.lua note below for the same rule applied to
-which-key):
+the user's own `~/.config/nvim` — see keymaps.lua note below for the same rule applied
+to which-key):
 ```lua
 { "saghen/blink.cmp", opts = { sources = { providers = {
     dbt = { name = "dbt", module = "dbt-power-user.completion.blink" } },
@@ -432,7 +434,7 @@ which-key):
 ```lua
 M.status() -> string   -- "<project_name> 󰆼 <target>" or "" if no project detected
                          -- (lualine component usage documented in README, not wired
-                         -- automatically into Bruno's lualine.lua — see note below)
+                         -- automatically into the user's own lualine.lua — see note below)
 ```
 
 ### `health.lua` — depends on `project`, `manifest`, `config`
