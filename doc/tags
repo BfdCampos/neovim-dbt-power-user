@@ -1,0 +1,17 @@
+:DbtBuild	dbt-power-user.txt	/*:DbtBuild*
+:DbtClean	dbt-power-user.txt	/*:DbtClean*
+:DbtCompile	dbt-power-user.txt	/*:DbtCompile*
+:DbtDeps	dbt-power-user.txt	/*:DbtDeps*
+:DbtDocsGenerate	dbt-power-user.txt	/*:DbtDocsGenerate*
+:DbtParse	dbt-power-user.txt	/*:DbtParse*
+:DbtRun	dbt-power-user.txt	/*:DbtRun*
+:DbtSeed	dbt-power-user.txt	/*:DbtSeed*
+:DbtTest	dbt-power-user.txt	/*:DbtTest*
+dbt-power-user-commands	dbt-power-user.txt	/*dbt-power-user-commands*
+dbt-power-user-config	dbt-power-user.txt	/*dbt-power-user-config*
+dbt-power-user-contents	dbt-power-user.txt	/*dbt-power-user-contents*
+dbt-power-user-health	dbt-power-user.txt	/*dbt-power-user-health*
+dbt-power-user-introduction	dbt-power-user.txt	/*dbt-power-user-introduction*
+dbt-power-user-keymaps	dbt-power-user.txt	/*dbt-power-user-keymaps*
+dbt-power-user-setup	dbt-power-user.txt	/*dbt-power-user-setup*
+dbt-power-user.txt	dbt-power-user.txt	/*dbt-power-user.txt*
