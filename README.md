@@ -99,8 +99,26 @@ This repo includes what you need to build a real, working test project so you ca
    git clone https://github.com/BfdCampos/neovim-dbt-power-user.git
    cd neovim-dbt-power-user
    ```
-2. **Install the plugin** as above.
-3. **Build the fixture.** Needs `dbt-core` and `dbt-duckdb` on `PATH` — any way you manage that (pyenv, a venv, whatever you already use) is fine:
+2. **Install the plugin.** Create `~/.config/nvim/lua/plugins/dbt-power-user.lua`:
+   ```lua
+   return {
+     {
+       "BfdCampos/neovim-dbt-power-user",
+       name = "dbt-power-user.nvim",
+       ft = { "sql", "yaml" },
+       dependencies = { "MunifTanjim/nui.nvim" },
+       config = function(_, opts)
+         require("dbt-power-user").setup(opts)
+       end,
+       opts = {
+         -- prefix = "<leader>D",   -- change to "<leader>M" if you ever enable
+                                     -- LazyVim's extras.lang.sql (it also claims <leader>D)
+       },
+     },
+   }
+   ```
+   Restart Neovim (or `:Lazy sync`).
+3. **Build the fixture.** Needs `dbt` on `PATH` (`pip install dbt-duckdb` pulls in dbt-core automatically) — any way you manage that (pyenv, a venv, whatever you already use) is fine:
    ```bash
    git clone --branch jaffle-shop-old https://github.com/dbt-labs/jaffle-shop.git tests/fixtures/jaffle-shop
    cd tests/fixtures/jaffle-shop
