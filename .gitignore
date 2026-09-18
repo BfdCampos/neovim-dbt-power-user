@@ -1,0 +1,10 @@
+# The jaffle-shop test fixture is its own cloned git repo (with generated dbt
+# artifacts, an installed dbt_packages/, and a local .duckdb file) -- fetched by the
+# testing instructions in README.md, not checked in as plugin source.
+/tests/fixtures/
+
+# Editor/OS noise
+.DS_Store
+
+# Claude Code's own local session/worktree state -- never project source
+.claude/

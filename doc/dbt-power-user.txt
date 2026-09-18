@@ -1,0 +1,130 @@
+*dbt-power-user.txt*    Keyboard-first dbt tooling for Neovim
+
+==============================================================================
+CONTENTS                                            *dbt-power-user-contents*
+
+  1. Introduction ..................... |dbt-power-user-introduction|
+  2. Setup ............................. |dbt-power-user-setup|
+  3. Configuration ..................... |dbt-power-user-config|
+  4. Commands .......................... |dbt-power-user-commands|
+  5. Keymaps ........................... |dbt-power-user-keymaps|
+  6. Health ............................ |dbt-power-user-health|
+
+==============================================================================
+1. Introduction                                 *dbt-power-user-introduction*
+
+A Neovim port of the useful, non-cloud parts of the vscode-dbt-power-user
+extension: compiled SQL preview, run/build/test/compile with dbt's own
+selector syntax, upstream/downstream lineage, go-to-definition and hover for
+ref()/source()/macro calls, ref()/source() completion, local health
+diagnostics, and quickfix integration. CLI-only -- everything shells out to
+the real `dbt` binary and reads its own JSON artifacts. See README.md for the
+full feature list, the reasoning behind what was deliberately left out, and
+step-by-step setup instructions using the bundled jaffle-shop test project.
+
+==============================================================================
+2. Setup                                               *dbt-power-user-setup*
+
+>lua
+    require("dbt-power-user").setup({
+      -- see |dbt-power-user-config| for every option
+    })
+<
+Call this once, from your plugin manager's config/opts hook. It registers the
+:Dbt* commands, the leader-key mappings under |dbt-power-user-keymaps|, and a
+FileType autocmd for "sql"/"yaml" that wires buffer-local `gd` and health
+diagnostics whenever a dbt project is detected above the buffer.
+
+==============================================================================
+3. Configuration                                      *dbt-power-user-config*
+
+Defaults, also documented in lua/dbt-power-user/config.lua:
+
+>lua
+    {
+      prefix = "<leader>D",
+      dbt_cmd = "dbt",
+      project_dir = nil,
+      profiles_dir = nil,
+      target = nil,
+      no_version_check = false,
+      query_limit = 500,
+      lineage = { max_depth = 5, direction = "horizontal" }, -- or "vertical"
+      picker = { preview = true },
+      create_model = { prefix = "stg", template = "{prefix}_{table}" },
+      defer_state_path = nil,
+    }
+<
+
+==============================================================================
+4. Commands                                          *dbt-power-user-commands*
+
+                                                                *:DbtRun*
+:DbtRun [selector]      Run a model. Defaults to "%" (current model). "%" in
+                         the selector expands to the current buffer's model
+                         name, so ":DbtBuild %+" runs the current model and
+                         everything downstream.
+
+                                                                *:DbtBuild*
+:DbtBuild [selector]    As :DbtRun, but `dbt build`.
+
+                                                                *:DbtTest*
+:DbtTest [selector]     `dbt test`, defaulting to the current model.
+
+                                                                *:DbtCompile*
+:DbtCompile [selector]  `dbt compile`, defaulting to the current model.
+
+                                                                *:DbtSeed*
+:DbtSeed [selector]     `dbt seed`.
+
+                                                *:DbtDeps* *:DbtClean* *:DbtParse*
+:DbtDeps                `dbt deps`.
+:DbtClean               `dbt clean`.
+:DbtParse               `dbt parse`.
+
+                                                        *:DbtDocsGenerate*
+:DbtDocsGenerate        `dbt docs generate`.
+
+==============================================================================
+5. Keymaps                                            *dbt-power-user-keymaps*
+
+Everything below sits under |g:dbt_power_user_prefix| (config: `prefix`,
+default "<leader>D"). `<leader>Da` opens a picker listing every action next
+to its keymap -- the one binding worth memorising.
+
+    <leader>Dr    Run current model
+    <leader>DR    Run current model and downstream
+    <leader>Du    Run upstream and current model
+    <leader>Db    Build current model
+    <leader>Dt    Test current model
+    <leader>Dc    Compile and preview current model
+    <leader>Dp    Preview query (buffer in normal mode, selection in visual)
+    <leader>Dl    Lineage flowchart
+    <leader>DL    Lineage picker (upstream)
+    <leader>Dg    Go to definition under cursor
+    <leader>Dk    Hover under cursor
+    <leader>Dm    Models picker
+    <leader>Ds    Sources picker
+    <leader>DM    Macros picker
+    <leader>Dh    Run history
+    <leader>DD    Toggle defer to prod
+    <leader>Do    Open dbt docs in browser
+    <leader>DG    Generate dbt docs
+    <leader>Da    Action palette
+
+Inside a dbt-project "sql" buffer, plain `gd` is also bound buffer-locally,
+alongside a native |tagfunc| so `<C-]>`/`<C-t>` work too. `K` is left alone
+on purpose -- it defaults to 'keywordprg' and is often already claimed by an
+LSP, so hover lives at <leader>Dk instead of fighting over it.
+
+==============================================================================
+6. Health                                              *dbt-power-user-health*
+
+>vim
+    :checkhealth dbt-power-user
+<
+Checks: the `dbt` executable, the detected project root, whether a usable
+manifest/catalog exist, a resolvable profiles.yml, and whether the
+configured prefix is already mapped to something else.
+
+ vim:tw=78:ts=8:noet:ft=help:norl:

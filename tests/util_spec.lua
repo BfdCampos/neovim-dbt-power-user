@@ -1,0 +1,72 @@
+local util = require("dbt-power-user.util")
+
+describe("util.json_decode", function()
+  it("decodes a valid JSON object", function()
+    local ok, data = util.json_decode('{"name":"customers","depth":3}')
+    assert.is_true(ok)
+    assert.are.equal("customers", data.name)
+    assert.are.equal(3, data.depth)
+  end)
+
+  it("decodes a valid JSON array", function()
+    local ok, data = util.json_decode('["a","b"]')
+    assert.is_true(ok)
+    assert.are.equal(2, #data)
+    assert.are.equal("b", data[2])
+  end)
+
+  it("returns false and an error for malformed JSON", function()
+    local ok, err = util.json_decode('{"name": }')
+    assert.is_false(ok)
+    assert.is_not_nil(err)
+  end)
+
+  it("returns false for a non-JSON string", function()
+    local ok = util.json_decode("not json at all")
+    assert.is_false(ok)
+  end)
+
+  it("returns false for an empty string", function()
+    local ok = util.json_decode("")
+    assert.is_false(ok)
+  end)
+
+  it("decodes the real jaffle-shop run_results.json", function()
+    local root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h")
+    local content = util.read_file(root .. "/tests/fixtures/jaffle-shop/target/run_results.json")
+    assert.is_not_nil(content)
+    local ok, data = util.json_decode(content)
+    assert.is_true(ok)
+    assert.is_table(data.results)
+  end)
+end)
+
+describe("util.path_join", function()
+  it("joins segments with a single separator", function()
+    assert.are.equal("/tmp/project/target", util.path_join("/tmp", "project", "target"))
+  end)
+
+  it("collapses duplicate separators between segments", function()
+    assert.are.equal("/tmp/project/target", util.path_join("/tmp/", "/project/", "target"))
+  end)
+
+  it("collapses runs of separators inside a segment", function()
+    assert.are.equal("/tmp/project/models/x.sql", util.path_join("/tmp//project", "models//x.sql"))
+  end)
+
+  it("skips nil and empty segments", function()
+    assert.are.equal("/tmp/target", util.path_join("/tmp", nil, "", "target"))
+  end)
+
+  it("preserves a leading separator on an absolute root", function()
+    assert.are.equal("/target", util.path_join("/", "target"))
+  end)
+
+  it("handles a single segment", function()
+    assert.are.equal("target", util.path_join("target"))
+  end)
+
+  it("returns an empty string when given nothing", function()
+    assert.are.equal("", util.path_join())
+  end)
+end)
