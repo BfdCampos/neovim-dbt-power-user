@@ -2,7 +2,31 @@
 
 A keyboard-first Neovim port of the useful parts of [AltimateAI/vscode-dbt-power-user](https://github.com/AltimateAI/vscode-dbt-power-user). CLI-only, no Python bridge, no cloud account, no telemetry. Everything shells out to the real `dbt` binary already on your machine and reads its own artifacts (`manifest.json`, `catalog.json`, `run_results.json`).
 
-Not everything from the VSCode extension made the trip across, on purpose. The Perspective results grid, the embedded docs browser, the AI assistance suite, column-level lineage, SQL validation and the collaboration threads are all commercial-cloud or GUI-only features with no honest Neovim equivalent, so they were left out rather than faked. See [Out of scope](#out-of-scope) for the full list and the reasoning.
+Not everything from the VSCode extension made the trip across, on purpose. Here's the shape of it at a glance:
+
+## At a glance: this vs. the VSCode extension
+
+**✅ What made the trip:**
+- 🏃 Run / build / test / compile, with dbt's own `+model` / `model+` / `+model+` selectors
+- 👁️ Compiled SQL preview
+- 📊 Query preview (`dbt show`), with CSV/JSON yank
+- 🕸️ Lineage as a real ASCII flowchart (horizontal or vertical, not an indented tree)
+- 🎯 Go to definition + hover for `ref()` / `source()` / macros
+- ⌨️ `ref()` / `source()` autocomplete
+- 🩺 Local health diagnostics as real Neovim diagnostics
+- 🚦 Quickfix integration on a failed run/build/test
+- 🔎 Pickers for models, sources, macros, run history, plus an action palette
+- 📖 Docs generate/open, defer to prod, create-model-from-source scaffolder
+
+**🚫 What deliberately didn't** (see [Out of scope](#out-of-scope) below for why each one):
+- 🧬 Column-level lineage
+- 🤖 The AI suite (explain/optimise/review/translate/fix)
+- ✅ SQL validation & the deeper healthcheck
+- 🖼️ The Perspective results grid, embedded docs browser, notebooks, collaboration threads
+- 🎨 SQL formatting
+- 💸 The CTE profiler and BigQuery cost estimator
+
+Smaller on purpose, not unfinished: everything cut was either commercial-cloud-gated, GUI-only with no honest terminal equivalent, or already solved better by another plugin you'd have installed anyway.
 
 ## Features
 
@@ -36,7 +60,7 @@ Create `~/.config/nvim/lua/plugins/dbt-power-user.lua`:
 ```lua
 return {
   {
-    dir = "/Users/brunocampos/personal_projects/dbt-power-user.nvim", -- local plugin, not (yet) on GitHub
+    "BfdCampos/neovim-dbt-power-user",
     name = "dbt-power-user.nvim",
     ft = { "sql", "yaml" },
     dependencies = { "MunifTanjim/nui.nvim" },
@@ -68,16 +92,48 @@ opts = {
 
 ## Getting started — testing it right now, with no dbt project of your own
 
-This repo ships a real, working test project so you can try every feature immediately without touching your own dbt setup. It's a clone of [dbt-labs/jaffle-shop](https://github.com/dbt-labs/jaffle-shop) (on the `jaffle-shop-old` branch — the current `main` requires an unreleased dbt 2.0) at `tests/fixtures/jaffle-shop/`, already built and verified against a local DuckDB file. It even carries its own `.python-version` (pointing at the pyenv version with `dbt-core`/`dbt-duckdb` installed) and its own `profiles.yml`, so the plugin's default `dbt_cmd = "dbt"` just works from inside that directory — nothing extra to configure.
+This repo includes what you need to build a real, working test project so you can try every feature without touching your own dbt setup: a small setup script that clones [dbt-labs/jaffle-shop](https://github.com/dbt-labs/jaffle-shop) (the `jaffle-shop-old` branch — the current `main` requires an unreleased dbt 2.0) into `tests/fixtures/jaffle-shop/` and builds it against a local DuckDB file. That directory is gitignored — it's its own nested git clone with generated artifacts, not checked in as plugin source — so build it once yourself, then reuse it for as long as you like.
 
-1. **Install the plugin** as above.
-2. **Open a model file in the fixture:**
+1. **Clone this repo** somewhere on disk, separate from wherever your plugin manager ends up installing it, since you'll run `nvim` directly against files inside this clone:
+   ```bash
+   git clone https://github.com/BfdCampos/neovim-dbt-power-user.git
+   cd neovim-dbt-power-user
    ```
-   nvim ~/personal_projects/dbt-power-user.nvim/tests/fixtures/jaffle-shop/models/marts/customers.sql
+2. **Install the plugin** as above.
+3. **Build the fixture.** Needs `dbt-core` and `dbt-duckdb` on `PATH` — any way you manage that (pyenv, a venv, whatever you already use) is fine:
+   ```bash
+   git clone --branch jaffle-shop-old https://github.com/dbt-labs/jaffle-shop.git tests/fixtures/jaffle-shop
+   cd tests/fixtures/jaffle-shop
+
+   # If you use pyenv and your active Python doesn't have dbt-core + dbt-duckdb, pin
+   # one that does for just this directory (skip this line otherwise):
+   pyenv local 3.9.10
+
+   cat > profiles.yml <<'EOF'
+   default:
+     target: dev
+     outputs:
+       dev:
+         type: duckdb
+         path: jaffle_shop.duckdb
+         schema: main
+         threads: 4
+   EOF
+
+   dbt deps  --no-version-check
+   dbt seed  --full-refresh --vars '{"load_source_data": true}' --no-version-check
+   dbt build --vars '{"load_source_data": true}' --no-version-check
+   dbt docs generate --no-version-check
+   cd ../../..
    ```
-3. **Run the health check**: `:checkhealth dbt-power-user`. You should see the dbt executable, the detected project (`jaffle_shop`), a real manifest and catalog, and a free `<leader>D` prefix, all green.
-4. **Try the actions palette**: `<leader>Da` opens a picker listing every action next to its keymap. Confirming any entry runs it — this is the one thing worth memorising, everything else is discoverable from here.
-5. A few specific things to try on `customers.sql`:
+   (`--no-version-check` is only needed because jaffle-shop's `main` branch — not `jaffle-shop-old` — pins a `require-dbt-version` ahead of any released dbt-core. It isn't something the plugin itself adds to your own commands; see `opts.no_version_check` below if you ever need it for your own project.)
+4. **Open a model file in the fixture** (from inside your clone of this repo):
+   ```
+   nvim tests/fixtures/jaffle-shop/models/marts/customers.sql
+   ```
+5. **Run the health check**: `:checkhealth dbt-power-user`. You should see the dbt executable, the detected project (`jaffle_shop`), a real manifest and catalog, and a free `<leader>D` prefix, all green.
+6. **Try the actions palette**: `<leader>Da` opens a picker listing every action next to its keymap. Confirming any entry runs it — this is the one thing worth memorising, everything else is discoverable from here.
+7. A few specific things to try on `customers.sql`:
    - `<leader>Dc` — compiled SQL preview. You'll see the real rendered SQL, `ref()` calls replaced with quoted relation names.
    - Put your cursor inside `ref('stg_customers')` on line 5 and press `gd` — jumps straight to `stg_customers.sql`. Press `<leader>Dk` instead for a hover card with columns and types.
    - `<leader>Dl` — a lineage flowchart for `customers`: `raw_items` and friends on the left, flowing right through `stg_order_items`/`order_items`/`orders` into `customers`. `<CR>` opens the file under the cursor, `o` opens it without leaving the popup, `q` closes it, `/` searches it like any buffer.
@@ -85,25 +141,13 @@ This repo ships a real, working test project so you can try every feature immedi
    - `<leader>Dr` — runs just this model; `<leader>DR` — this model and everything downstream. Watch the notification, then check `:copen` if anything failed (nothing will, the fixture is a clean build).
    - `<leader>Dm` / `<leader>Ds` / `<leader>DM` — pickers over every model / source / macro in the project.
 
-If you ever want to rebuild the fixture from scratch (fresh clone, fresh DuckDB file):
-
-```bash
-DBT=/opt/homebrew/var/pyenv/versions/3.9.10/bin/dbt   # or wherever pyenv put it: `pyenv versions`
-FIXTURE=~/personal_projects/dbt-power-user.nvim/tests/fixtures/jaffle-shop
-
-$DBT deps  --project-dir "$FIXTURE" --profiles-dir "$FIXTURE" --no-version-check
-$DBT seed  --project-dir "$FIXTURE" --profiles-dir "$FIXTURE" --no-version-check --full-refresh --vars '{"load_source_data": true}'
-$DBT build --project-dir "$FIXTURE" --profiles-dir "$FIXTURE" --no-version-check --vars '{"load_source_data": true}'
-$DBT docs generate --project-dir "$FIXTURE" --profiles-dir "$FIXTURE" --no-version-check
-```
-
-(`--no-version-check` is only needed because jaffle-shop's `main` branch — not the `jaffle-shop-old` branch this fixture is on — pins a `require-dbt-version` ahead of any released dbt-core. It isn't something the plugin itself adds to your commands; see `opts.no_version_check` below if you ever need it for your own project.)
+If you ever want a fresh DuckDB file, delete `tests/fixtures/jaffle-shop/` and repeat step 3.
 
 ## Running it against your own project
 
 Point `opts.project_dir`/`opts.profiles_dir`/`opts.dbt_cmd`/`opts.target` at whatever makes `dbt <anything>` work from your terminal today — the plugin doesn't need a real dbt project to be anything special, it just shells out the same commands you'd type yourself.
 
-One thing worth flagging for Monzo's `analytics` repo specifically: dbt there normally runs through `execute-in-data-shell adbt` / `monzo adbt run`, not a bare `dbt` on `PATH`. If a plain `dbt compile`/`dbt run` doesn't already work for you outside this plugin (try it in a terminal first), set `opts.dbt_cmd` to whatever wrapper does — I haven't tested this plugin against that setup, so treat it as a starting point to adjust rather than something guaranteed to work first try.
+One thing worth flagging: some organisations wrap `dbt` in their own script rather than exposing it directly on `PATH` (a shell function, a task runner, whatever). If a plain `dbt compile`/`dbt run` doesn't already work for you outside this plugin (try it in a terminal first), set `opts.dbt_cmd` to whatever wrapper does — this plugin hasn't been tested against every such setup, so treat it as a starting point to adjust rather than something guaranteed to work first try.
 
 ## Configuration
 
